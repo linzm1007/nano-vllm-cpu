@@ -7,8 +7,8 @@ def main():
     path = os.path.expanduser("D:\models\Qwen3-0.6B")
     tokenizer = AutoTokenizer.from_pretrained(path)
     llm = LLM(path)
-
-    sampling_params = SamplingParams(temperature=0.6, max_tokens=1024)
+    # max_tokens太差会报错
+    sampling_params = SamplingParams(temperature=0.6, max_tokens=128)
     prompts = [
         "你是谁",
         "中国是",

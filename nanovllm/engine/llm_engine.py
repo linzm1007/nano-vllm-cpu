@@ -3,7 +3,6 @@ from dataclasses import fields
 from time import perf_counter
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
-import torch
 
 from nanovllm.config import Config
 from nanovllm.sampling_params import SamplingParams

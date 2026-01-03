@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 def divide(numerator, denominator):
     # 适配CPU场景：分母固定为1，直接返回分子
-    assert denominator == 1, "CPU模式下无需张量并行，分母必须为1"
+    assert denominator == 1
     return numerator
 
 
@@ -31,7 +31,6 @@ class LinearBase(nn.Module):
         raise NotImplementedError
 
     def weight_loader(self, param: nn.Parameter, loaded_weight: torch.Tensor, *args, **kwargs):
-        # 基础权重加载逻辑：直接复制（移除TP分片逻辑）
         param.data.copy_(loaded_weight)
 
 
@@ -76,11 +75,9 @@ class MergedColumnParallelLinear(ColumnParallelLinear):
             bias: bool = False,
     ):
         self.output_sizes = output_sizes
-        # 直接使用求和后的完整output_size
         super().__init__(input_size, sum(output_sizes), bias)
 
     def weight_loader(self, param: nn.Parameter, loaded_weight: torch.Tensor, loaded_shard_id: int):
-        # 移除TP分片偏移/切分逻辑，直接复制对应分片的完整权重
         shard_offset = sum(self.output_sizes[:loaded_shard_id])
         shard_size = self.output_sizes[loaded_shard_id]
         param_data = param.data.narrow(0, shard_offset, shard_size)
@@ -100,14 +97,12 @@ class QKVParallelLinear(ColumnParallelLinear):
     ):
         total_num_kv_heads = total_num_kv_heads or total_num_heads
         self.head_size = head_size
-        # 移除TP_SIZE切分，直接使用完整的head数
         self.num_heads = total_num_heads
         self.num_kv_heads = total_num_kv_heads
         output_size = (total_num_heads + 2 * total_num_kv_heads) * self.head_size
         super().__init__(hidden_size, output_size, bias)
 
     def weight_loader(self, param: nn.Parameter, loaded_weight: torch.Tensor, loaded_shard_id: str):
-        # 移除TP分片逻辑，直接加载对应Q/K/V的完整权重
         param_data = param.data
         assert loaded_shard_id in ["q", "k", "v"]
         if loaded_shard_id == "q":
@@ -133,9 +128,7 @@ class RowParallelLinear(LinearBase):
             output_size: int,
             bias: bool = False,
     ):
-        # 移除TP_SIZE切分，直接使用完整的input_size
         super().__init__(input_size, output_size, bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # 移除TP的all_reduce和bias的rank判断
         return F.linear(x, self.weight, self.bias)

@@ -25,19 +25,16 @@ class Qwen3Attention(nn.Module):
             rope_scaling: tuple | None = None,
     ) -> None:
         super().__init__()
-        # 恢复张量并行（TP）相关计算（与linear.py/embed_head.py对齐）
         tp_size = 1
 
         self.total_num_heads = num_heads
-        # 确保总头数能被TP数整除
         assert self.total_num_heads % tp_size == 0
-        self.num_heads = self.total_num_heads // tp_size  # 单卡实际头数
+        self.num_heads = self.total_num_heads // tp_size
 
         self.total_num_kv_heads = num_kv_heads
         assert self.total_num_kv_heads % tp_size == 0
-        self.num_kv_heads = self.total_num_kv_heads // tp_size  # 单卡KV头数
+        self.num_kv_heads = self.total_num_kv_heads // tp_size
 
-        # 修复head_dim计算错误（原代码直接用hidden_size，正确应为总维度/总头数）
         self.head_dim = head_dim or (hidden_size // self.total_num_heads)
         self.q_size = self.num_heads * self.head_dim
         self.kv_size = self.num_kv_heads * self.head_dim
@@ -156,7 +153,6 @@ class Qwen3DecoderLayer(nn.Module):
         if residual is None:
             hidden_states, residual = self.input_layernorm(hidden_states), hidden_states
         else:
-            # 适配RMSNorm的add_rms_forward逻辑（输入+残差后做norm）
             hidden_states, residual = self.input_layernorm(hidden_states, residual)
         hidden_states = self.self_attn(positions, hidden_states)
         hidden_states, residual = self.post_attention_layernorm(hidden_states, residual)
@@ -190,7 +186,6 @@ class Qwen3Model(nn.Module):
 
 
 class Qwen3ForCausalLM(nn.Module):
-    # 保持权重映射与权重加载逻辑对齐
     packed_modules_mapping = {
         "q_proj": ("qkv_proj", "q"),
         "k_proj": ("qkv_proj", "k"),
@@ -206,7 +201,6 @@ class Qwen3ForCausalLM(nn.Module):
         super().__init__()
         self.model = Qwen3Model(config)
         self.lm_head = ParallelLMHead(config.vocab_size, config.hidden_size)
-        # 权重绑定（与Qwen3官方实现对齐）
         if config.tie_word_embeddings:
             self.lm_head.weight.data = self.model.embed_tokens.weight.data
 
@@ -221,5 +215,4 @@ class Qwen3ForCausalLM(nn.Module):
             self,
             hidden_states: torch.Tensor,
     ) -> torch.Tensor:
-        # 调用ParallelLMHead计算logits（适配张量并行的词表分片）
         return self.lm_head(hidden_states)

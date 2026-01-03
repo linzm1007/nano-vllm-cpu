@@ -3,7 +3,6 @@ import logging
 from torch import nn
 from nanovllm.utils.context import get_context
 
-# 配置日志（输出关键调试信息）
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -36,7 +35,6 @@ class Attention(nn.Module):
         context = get_context()
         k_cache, v_cache = self.k_cache, self.v_cache
 
-        # ====================== 1. 关键参数日志打印（调试核心） ======================
         # logger.debug(f"=== Attention Forward Debug Info ===")
         # logger.debug(f"Q shape: {q.shape}, K shape: {k.shape}, V shape: {v.shape}")
         # logger.debug(f"num_heads: {self.num_heads}, num_kv_heads: {self.num_kv_heads}, head_dim: {self.head_dim}")
@@ -52,7 +50,7 @@ class Attention(nn.Module):
         assert v.shape[-2:] == (self.num_kv_heads, self.head_dim), \
             f"V shape {v.shape} mismatch with kv_heads/head_dim: ({self.num_kv_heads}, {self.head_dim})"
 
-        # 简化KV Cache存储（CPU下无需Triton内核）
+        # 简化KV Cache存储
         if k_cache.numel() and v_cache.numel() and context.slot_mapping is not None and context.slot_mapping.numel() > 0:
             # logger.debug(f"slot_mapping raw shape: {context.slot_mapping.shape}, values: {context.slot_mapping[:10]}")
 

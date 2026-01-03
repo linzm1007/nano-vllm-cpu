@@ -1,4 +1,3 @@
-# 极简CPU单卡版本（无分布式）
 import torch
 from torch import nn
 import torch.nn.functional as F
