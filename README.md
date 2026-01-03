@@ -23,7 +23,6 @@ huggingface-cli download --resume-download Qwen/Qwen3-0.6B \
 ## Quick Start
 
 See `example.py` for usage. The API mirrors vLLM's interface with minor differences in the `LLM.generate` method:
-
 ```python
 from nanovllm import LLM, SamplingParams
 
@@ -32,7 +31,9 @@ sampling_params = SamplingParams(temperature=0.6, max_tokens=256)
 prompts = ["Hello, Nano-vLLM."]
 outputs = llm.generate(prompts, sampling_params)
 outputs[0]["text"]
+
 ```
+![img.png](img.png)
 
 
 
